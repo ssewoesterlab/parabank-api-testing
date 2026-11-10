@@ -1,0 +1,188 @@
+{
+  "info": {
+    "name": "ParaBank API Testing",
+    "description": "Postman API tests covering account creation, account lookup, and customer account listing (positive and negative scenarios).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Account",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\r\nconst response = xml2Json(pm.response.text());\r\nconst account = response.account;\r\n\r\n\r\npm.test(\"Status Code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\n\r\npm.test(\"Account ID is valid\", function () {\r\n    pm.expect(Number(account.id)).to.be.greaterThan(0);\r\n});\r\n\r\n\r\npm.test(\"Customer ID is correct\", function () {\r\n    pm.expect(Number(account.customerId)).to.equal(Number(pm.collectionVariables.get(\"customerId\")));\r\n});\r\n\r\n\r\npm.test(\"Account Type is CHECKING\", function () {\r\n    pm.expect(account.type).to.equal(\"CHECKING\");\r\n});\r\n\r\n\r\npm.test(\"Initial Balance is 0\", function () {\r\n    pm.expect(Number(account.balance)).to.equal(0);\r\n});\r\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/createAccount?customerId={{customerId}}&newAccountType=0&fromAccountId={{accountId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "createAccount"
+          ],
+          "query": [
+            {
+              "key": "customerId",
+              "value": "{{customerId}}"
+            },
+            {
+              "key": "newAccountType",
+              "value": "0"
+            },
+            {
+              "key": "fromAccountId",
+              "value": "{{accountId}}"
+            }
+          ]
+        },
+        "description": "US-01 — Create a checking account using an existing customer and source account. Creates data on every run."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Account by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expectedAccountId = Number(\r\n    pm.collectionVariables.get(\"accountId\")\r\n);\r\n\r\npm.test(\"Account ID is correct\", function () {\r\n    const response = xml2Json(pm.response.text());\r\n\r\n    pm.expect(Number(response.account.id))\r\n        .to.equal(expectedAccountId);\r\n});\r\n\r\npm.test(\"Status Code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\n\r\npm.test(\"Customer ID is correct\", function () {\r\n    const response = xml2Json(pm.response.text());\r\n\r\n    const expectedCustomerId = Number(\r\n        pm.collectionVariables.get(\"customerId\")\r\n    );\r\n\r\n    pm.expect(Number(response.account.customerId))\r\n        .to.equal(expectedCustomerId);\r\n});\r\n\r\npm.test(\"Account Type is CHECKING\", function () {\r\n    const response = xml2Json(pm.response.text());\r\n\r\n    pm.expect(response.account.type).to.equal(\"CHECKING\");\r\n});\r\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/accounts/{{accountId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "accounts",
+            "{{accountId}}"
+          ]
+        },
+        "description": "US-02 — Retrieve a known account by ID."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Account - Invalid ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid Account ID returns 400\",function(){\r\n    pm.response.to.have.status(400);\r\n});\r\n\r\npm.test(\"Account not found message is returned\",function(){\r\n    pm.expect(pm.response.text())\r\n    .to.include(\"Could not find account\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/accounts/99999999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "accounts",
+            "99999999"
+          ]
+        },
+        "description": "US-02 — Negative case: request a nonexistent account."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Customer Accounts",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\r\nconst response = xml2Json(pm.response.text());\r\nconst accounts = response.accounts.account;\r\n\r\nconst expectedCustomerId = Number(\r\n    pm.collectionVariables.get(\"customerId\")\r\n);\r\n\r\n\r\npm.test(\"Status Code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Account list is not empty\", function () {\r\n    pm.expect(accounts).to.be.an(\"array\").that.is.not.empty;\r\n});\r\n\r\n\r\npm.test(\"All accounts belong to the customer\", function () {\r\n    accounts.forEach(account => {\r\n        pm.expect(Number(account.customerId))\r\n            .to.equal(expectedCustomerId);\r\n    });\r\n});\r\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/customers/{{customerId}}/accounts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "customers",
+            "{{customerId}}",
+            "accounts"
+          ]
+        },
+        "description": "US-03 — Retrieve accounts for a customer."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Customer Accounts - Invalid ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\r\npm.test(\"Invalid Customer ID returns 400\", function () {\r\n    pm.response.to.have.status(400);\r\n});\r\n\r\npm.test(\"Customer not found message is returned\", function () {\r\n    pm.expect(pm.response.text())\r\n        .to.include(\"Could not find customer\");\r\n});\r\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/customers/99999999/accounts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "customers",
+            "99999999",
+            "accounts"
+          ]
+        },
+        "description": "US-03 — Negative case: request accounts for a nonexistent customer."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "customerId",
+      "value": ""
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    }
+  ]
+}
